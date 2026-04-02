@@ -6,12 +6,15 @@ Personal agentic infrastructure using a court organizational metaphor. A Grand V
 
 1. **Palace is an app, not an OS.** Users interact with Finn, not with Tailscale ACLs. Infrastructure is invisible.
 2. **Maximize throughput, not minimize cost.** Right model for the problem. `throughput = Σ(tasks × size × importance)`.
-3. **Directional governance.** Novo models for sensitive Novo data. Personal can help everywhere else. The wall faces one direction.
-4. **Security through classification, not location.** Data is sensitive because of WHAT it contains, not WHERE it lives. 6-tier model.
-5. **Courtiers own organization, share data.** Three layers: Organization (owned), Data (fluid), Counsel (surfaced).
-6. **Copy-in, PR-out.** Agents get read-only copies. Write-back only through review/PR process.
-7. **File-based first, database later.** Human-readable markdown and YAML in Phase 1. Database backing in Phase 2.
-8. **Test at every boundary.** TDD for structural code. PromptFoo evaluation for agent behavior. Red team for security.
+3. **Deterministic agent interaction.** Inter-agent communication must be structured, observable, and reproducible — not LLM-to-LLM chat. Use structured message schemas, typed URIs, and auditable state transitions.
+4. **Model-agnostic harness.** Palace is NOT bound to Claude or any single provider. The harness connects to any model/inference provider (Anthropic, OpenAI, Google, Ollama, etc.). Courtiers receive intelligent model/effort/token assignment from the Vizier before spinning up their org. If something only works with one provider, it's not ready.
+5. **Directional governance.** Novo models for sensitive Novo data. Personal can help everywhere else. The wall faces one direction.
+6. **Security through classification, not location.** Data is sensitive because of WHAT it contains, not WHERE it lives. 6-tier model.
+7. **Courtiers own organization, share data.** Three layers: Organization (owned), Data (fluid), Counsel (surfaced).
+8. **Copy-in, PR-out.** Agents get read-only copies. Write-back only through review/PR process.
+9. **File-based first, database later.** Human-readable markdown and YAML in Phase 1. Database backing in Phase 2.
+10. **Test at every boundary.** TDD for structural code. PromptFoo evaluation for agent behavior. Red team for security.
+11. **UX is open for exploration.** Phase 1 is TUI. Long-term UX direction (spatial, dashboard, hybrid) is explicitly undecided.
 
 ## Architecture References
 

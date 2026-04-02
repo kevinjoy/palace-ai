@@ -6,6 +6,22 @@ Timestamped record of architectural and design decisions. Newest first.
 
 ## 2026-04-03
 
+### D-015: UX direction explicitly left open for exploration
+- **Decision:** Phase 1 is TUI. Long-term UX (spatial, dashboard, hybrid) is undecided.
+- **Rationale:** Good references exist (Pixel Agents, Paperclip, cmux) but premature to lock in.
+- **Impact:** Phase 1 builds TUI; UX exploration is a separate design track.
+
+### D-014: Deterministic agent interaction required
+- **Decision:** All inter-agent communication must be structured, observable, and reproducible — typed message schemas, URI-addressable state, auditable transitions, idempotent operations.
+- **Rationale:** Kevin: "make agentic interaction as deterministic as possible." LLM-to-LLM chat is not an acceptable communication pattern.
+- **Impact:** Message bus uses typed schemas, not free-form text. All state changes logged.
+
+### D-013: Palace must be model-agnostic (provider abstraction layer)
+- **Decision:** The harness connects to ANY model/inference provider. Courtiers are not bound to Claude. The Vizier assigns provider + model + effort + tokens before Courtiers spin up their org.
+- **Rationale:** Kevin deeply values the multi-provider flexibility of Hermes/Openclaw/OpenCode. Being locked to one provider contradicts the throughput-maximization principle.
+- **Impact:** Provider Abstraction Layer added to architecture. OpenCode's 3-method interface (send, stream, model-info) adopted as reference. Phase 1 uses CLI tools as providers; Phase 2 formalizes typed adapters.
+- **Reference:** OpenCode (`references/opencode/internal/llm/provider/provider.go`)
+
 ### D-012: Testing strategy document added to spec suite
 - **Decision:** Include `docs/testing-strategy.md` as a deliverable alongside the spec
 - **Rationale:** Testing approach should be defined before implementation begins, not after

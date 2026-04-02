@@ -98,6 +98,61 @@ Palace uses Claude Code's **Agent Teams** for inter-agent communication:
 
 Assessment: Agent Teams is sufficient for Phase 1 (MBP-only, Claude Code agents). Unix sockets become relevant in Phase 2 when NUC agents need to communicate with MBP agents across machines.
 
+### Provider Abstraction Layer
+
+**Palace is model-agnostic.** The harness must NOT be bound to Claude or any single frontier lab. Any model or inference provider should be connectable — Anthropic, OpenAI, Google, Ollama, local models, future providers.
+
+**Why this matters:** Courtiers receive model/effort/token assignment from the Vizier BEFORE spinning up their org. The Vizier must be able to say "this research task goes to Gemini, this code review goes to Codex, this synthesis goes to Opus" — routing across providers, not just across accounts of the same provider.
+
+**Architecture:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│  VIZIER (Task Analysis + Routing Decision)          │
+│  Analyzes: complexity, sensitivity, task type        │
+│  Decides: provider + model + account + effort        │
+└──────────────┬──────────────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────────────┐
+│  PROVIDER ABSTRACTION LAYER                          │
+│  Uniform interface for all providers                 │
+│                                                      │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
+│  │ Anthropic│ │  OpenAI  │ │  Google  │ │ Ollama │ │
+│  │ Claude   │ │  Codex   │ │  Gemini  │ │ Local  │ │
+│  │ API/CLI  │ │  CLI     │ │  CLI     │ │ Server │ │
+│  └──────────┘ └──────────┘ └──────────┘ └────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+**Provider interface (uniform across all providers):**
+- `execute(task, config) → result` — send a task, get structured output
+- `status() → availability` — check provider health, remaining capacity
+- `capabilities() → model_list` — what models are available, what they're good at
+
+**Reference implementations:**
+- **Hermes:** Supports Claude, GPT, Gemini, Ollama, any OpenAI-compatible API via adapter pattern
+- **Openclaw:** Gateway pattern connecting to multiple model backends
+- **OpenCode:** Multi-provider with provider-specific adapters
+- **Paperclip:** Adapter system (Claude, Codex, Gemini, Hermes, Openclaw, HTTP, generic Process)
+- **LiteLLM:** Unified API proxy supporting 100+ providers — potential gateway layer
+
+**Phase 1:** The Vizier orchestrates via CLI tools (`claude`, `claude-novo`, `codex`, `gemini`) as separate processes. The provider abstraction is the CLI itself — each tool is a provider.
+**Phase 2:** Formalize into a typed provider interface with adapters. Add API-based providers (Anthropic API, OpenAI API) alongside CLI providers.
+**Phase 3:** Intelligent routing with PromptFoo-driven benchmarking per task type per provider.
+
+### Deterministic Agent Interaction
+
+Agent-to-agent communication must be **structured, observable, and reproducible** — not free-form LLM conversation.
+
+**Principles:**
+- **Typed message schemas:** Every inter-agent message has a defined structure (task assignment, result, status update, counsel submission). No unstructured text passing.
+- **URI-addressable state:** All shared state referenced via `palace://` URIs. Agents don't pass blobs — they pass references.
+- **Auditable state transitions:** Every Courtier state change (dormant → active, task received → completed) is logged with timestamp, trigger, and outcome.
+- **Idempotent operations:** If a heartbeat or message is delivered twice, the system produces the same result. No hidden side effects.
+
+**This is what separates Palace from "agents chatting with each other."** The OpenViking filesystem paradigm, typed URIs, and structured message envelopes make agent interaction predictable and debuggable.
+
 ## Memory Architecture
 
 ### OpenViking-Inspired Tiered Context

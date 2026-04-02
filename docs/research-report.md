@@ -16,7 +16,8 @@ Research conducted Apr 2-3, 2026 to inform Palace AI's architecture. All repos c
 | 8 | [Pixel Agents](#8-pixel-agents) | **Medium** | Spatial-metaphor agent visualization UX |
 | 9 | [cmux](#9-cmux) | **Medium** | Terminal UX for agents — notifications, workspaces |
 | 10 | [Autoresearch](#10-autoresearch) | **Medium** | Keep/discard hill-climbing for Vizier research orchestration |
-| 11 | [aisw + KMJ Gist](#11-aisw--kmj-gist) | **Low** | Account switching — solved by CLAUDE_CONFIG_DIR |
+| 11 | [OpenCode](#11-opencode) | **High** | Provider abstraction — 3-method interface, 8 providers, unified events |
+| 12 | [aisw + KMJ Gist](#12-aisw--kmj-gist) | **Low** | Account switching — solved by CLAUDE_CONFIG_DIR |
 | 12 | [TurboQuant](#12-turboquant) | **Low** | KV-cache compression — only relevant for local inference |
 | 13 | [Pretext](#13-pretext) | **Low** | DOM-free text measurement — niche dashboard optimization |
 | 14 | [Claude Code Agent Teams](#14-claude-code-agent-teams) | **High** | Peer-to-peer agent communication — Palace's comms foundation |
@@ -187,7 +188,23 @@ Research conducted Apr 2-3, 2026 to inform Palace AI's architecture. All repos c
 
 ---
 
-## 11. aisw + KMJ Gist
+## 11. OpenCode
+**Repo:** [opencode-ai/opencode](https://github.com/opencode-ai/opencode) | **Cloned:** `references/opencode/`
+
+**Summary:** Multi-provider AI coding agent in Go with a clean provider abstraction — the best reference for Palace's model-agnostic architecture.
+
+**Key Patterns:**
+- **Provider interface** (`internal/llm/provider/provider.go`): Three methods — `SendMessages()`, `StreamResponse()`, `Model()`. Every provider implements this same interface.
+- **8 providers shipped:** Anthropic, OpenAI, Gemini, Azure, Bedrock, VertexAI, Copilot, plus any OpenAI-compatible API. Each is a separate file implementing the Provider interface.
+- **Model registry** (`internal/llm/models/`): Per-provider model catalogs with capabilities, context windows, and pricing metadata. The agent queries the registry to know what's available.
+- **Unified event stream:** `ProviderEvent` with typed events (content_start, tool_use_start, thinking_delta, complete, error) — same event types regardless of provider.
+- **Token usage tracking:** `TokenUsage` struct (input, output, cache_creation, cache_read) is provider-agnostic.
+
+**Palace application:** **This is the reference implementation for Palace's Provider Abstraction Layer.** The three-method interface (send, stream, model-info) is exactly what Palace needs. Each provider adapter maps provider-specific APIs to the uniform interface. The unified event stream means the Vizier doesn't care which provider is running — it processes the same events.
+
+---
+
+## 12. aisw + KMJ Gist
 
 **Summary:** Account switching tools for Claude Code.
 
