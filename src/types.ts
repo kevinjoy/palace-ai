@@ -67,6 +67,8 @@ export interface MemoryItem {
 export interface AgentMessage {
   readonly type: "task" | "result" | "status" | "counsel" | "cancel";
   readonly id: string;
+  readonly correlationId: string;
+  readonly parentId?: string;
   readonly from: string;
   readonly to: string;
   readonly timestamp: string;

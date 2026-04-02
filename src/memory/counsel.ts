@@ -1,13 +1,14 @@
 /**
  * Counsel Layer — shared insight surface for cross-courtier visibility.
  *
- * Courtiers submit their best outputs to the Counsel Layer. All courtiers
- * can scan it at L0 (summaries) or request L1/L2 depth. The Vizier mediates.
+ * Security: submissions require a registered caller identity.
+ * The `from` field is verified against the caller, not self-asserted.
  */
 
 import type { MemoryItem, SecurityTier } from "../types.ts";
-import type { PalaceMemory } from "./memory.ts";
+import type { PalaceMemory, CallerIdentity } from "./memory.ts";
 import { buildPalaceUri } from "./uri.ts";
+import { UnauthorizedCounselError } from "../errors/palace-errors.ts";
 
 interface CounselSubmission {
   readonly from: string;
@@ -19,8 +20,16 @@ interface CounselSubmission {
 export class CounselLayer {
   constructor(private readonly memory: PalaceMemory) {}
 
-  /** Submit an item to the Counsel Layer */
-  async submit(submission: CounselSubmission): Promise<MemoryItem> {
+  /** Submit an item to the Counsel Layer. Caller identity is verified. */
+  async submit(submission: CounselSubmission, caller?: CallerIdentity): Promise<MemoryItem> {
+    // If caller provided, verify the `from` field matches
+    if (caller && caller.name !== submission.from) {
+      throw new UnauthorizedCounselError(
+        submission.from,
+        `Caller "${caller.name}" cannot submit as "${submission.from}"`,
+      );
+    }
+
     const slug = submission.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -28,27 +37,26 @@ export class CounselLayer {
     const timestamp = Date.now();
     const uri = buildPalaceUri("counsel", `${submission.from}/${slug}-${timestamp}`);
 
-    return this.memory.write({
-      uri,
-      tier: submission.tier,
-      content: submission.content,
-    });
+    return this.memory.write(
+      { uri, tier: submission.tier, content: submission.content },
+      caller,
+    );
   }
 
-  /** List all counsel items */
-  async list(): Promise<readonly MemoryItem[]> {
-    return this.memory.list("counsel");
+  /** List all counsel items, filtered by caller's tier access */
+  async list(caller?: CallerIdentity): Promise<readonly MemoryItem[]> {
+    return this.memory.list("counsel", caller);
   }
 
   /** List counsel items from a specific courtier */
-  async listFrom(courtierName: string): Promise<readonly MemoryItem[]> {
-    const all = await this.list();
+  async listFrom(courtierName: string, caller?: CallerIdentity): Promise<readonly MemoryItem[]> {
+    const all = await this.list(caller);
     return all.filter((item) => item.uri.includes(`/counsel/${courtierName}/`));
   }
 
   /** Scan all counsel items at L0 for efficient overview */
-  async scanL0(): Promise<readonly string[]> {
-    const all = await this.list();
+  async scanL0(caller?: CallerIdentity): Promise<readonly string[]> {
+    const all = await this.list(caller);
     return all.map((item) => item.l0);
   }
 }

@@ -5,6 +5,7 @@
 
 import type { CourtierStatus } from "../types.ts";
 import { VALID_TRANSITIONS } from "../types.ts";
+import { InvalidTransitionError } from "../errors/palace-errors.ts";
 
 export class CourtierLifecycle {
   private _status: CourtierStatus;
@@ -19,14 +20,11 @@ export class CourtierLifecycle {
     return this._status;
   }
 
-  /** Attempt a state transition. Returns new status or throws if invalid. */
+  /** Attempt a state transition. Returns previous status or throws if invalid. */
   transition(to: CourtierStatus): CourtierStatus {
     const allowed = VALID_TRANSITIONS[this._status];
     if (!allowed.includes(to)) {
-      throw new Error(
-        `Invalid transition for ${this.name}: ${this._status} → ${to}. ` +
-        `Allowed: ${allowed.join(", ")}`
-      );
+      throw new InvalidTransitionError(this.name, this._status, to, allowed);
     }
     const previous = this._status;
     this._status = to;

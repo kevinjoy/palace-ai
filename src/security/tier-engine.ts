@@ -3,7 +3,7 @@
  * Implementation in Step 2 (INTERN-54).
  */
 
-import type { SecurityTier, CourtierConfig } from "../types.ts";
+import type { SecurityTier } from "../types.ts";
 
 /** Tier hierarchy from most to least restrictive */
 export const TIER_HIERARCHY: readonly SecurityTier[] = [
@@ -23,9 +23,15 @@ export function checkTierAccess(
   return courtierTierAccess.includes(targetTier);
 }
 
+/** Minimal identity needed for access checks */
+export interface AccessIdentity {
+  readonly name: string;
+  readonly security: { readonly tierAccess: readonly SecurityTier[] };
+}
+
 /** Check if a courtier can access a resource at a given tier */
 export function canAccess(
-  courtier: Pick<CourtierConfig, "name" | "security">,
+  courtier: AccessIdentity,
   resourceTier: SecurityTier,
 ): boolean {
   if (resourceTier === "crown_jewels") return false;

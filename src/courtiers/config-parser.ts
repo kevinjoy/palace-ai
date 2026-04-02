@@ -1,38 +1,45 @@
 /**
- * Courtier Config Parser — loads and validates courtier YAML definitions.
- * Full implementation in Step 3 (INTERN-55).
+ * Courtier Config Parser — loads and validates courtier YAML through Zod.
+ * Handles snake_case → camelCase normalization in one place.
  */
 
 import { parse } from "yaml";
-import type { CourtierConfig } from "../types.ts";
+import { RawCourtierYamlSchema } from "../schemas.ts";
+import { ConfigValidationError } from "../errors/palace-errors.ts";
+import type { CourtierConfig, SecurityTier } from "../types.ts";
 
-/** Parse a YAML string into a CourtierConfig */
+/** Parse and validate a YAML string into a CourtierConfig */
 export function parseCourtierConfig(yamlContent: string): CourtierConfig {
-  const raw = parse(yamlContent) as { courtier: Record<string, unknown> };
-  const c = raw.courtier;
+  const raw = parse(yamlContent);
+  const result = RawCourtierYamlSchema.safeParse(raw);
+
+  if (!result.success) {
+    const errors = result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+    throw new ConfigValidationError("courtier config", errors);
+  }
+
+  const c = result.data.courtier;
+
   return {
-    name: c.name as string,
-    displayName: (c.displayName ?? c.display_name) as string,
-    description: c.description as string,
-    domain: c.domain as CourtierConfig["domain"],
+    name: c.name,
+    displayName: (c.displayName ?? c.display_name)!,
+    description: c.description,
+    domain: c.domain,
     security: {
-      tierAccess: ((c.security as Record<string, unknown>).tierAccess ??
-        (c.security as Record<string, unknown>).tier_access) as CourtierConfig["security"]["tierAccess"],
-      writeScope: ((c.security as Record<string, unknown>).writeScope ??
-        (c.security as Record<string, unknown>).write_scope) as string,
-      auditLevel: ((c.security as Record<string, unknown>).auditLevel ??
-        (c.security as Record<string, unknown>).audit_level) as CourtierConfig["security"]["auditLevel"],
+      tierAccess: (c.security.tierAccess ?? c.security.tier_access ?? []) as SecurityTier[],
+      writeScope: (c.security.writeScope ?? c.security.write_scope ?? "own_workspace"),
+      auditLevel: (c.security.auditLevel ?? c.security.audit_level ?? "standard") as "none" | "standard" | "full",
     },
-    operations: c.operations as CourtierConfig["operations"],
-    modelPreference: (c.modelPreference ?? c.model_preference) as CourtierConfig["modelPreference"],
-    accountScope: (c.accountScope ?? c.account_scope) as CourtierConfig["accountScope"],
-    canUseAccounts: (c.canUseAccounts ?? c.can_use_accounts) as readonly string[],
-    status: c.status as CourtierConfig["status"],
-    activatedInPhase: (c.activatedInPhase ?? c.activated_in_phase) as number,
+    operations: c.operations,
+    modelPreference: (c.modelPreference ?? c.model_preference)!,
+    accountScope: (c.accountScope ?? c.account_scope ?? "personal"),
+    canUseAccounts: (c.canUseAccounts ?? c.can_use_accounts ?? ["personal"]),
+    status: c.status,
+    activatedInPhase: (c.activatedInPhase ?? c.activated_in_phase ?? 1),
   };
 }
 
-/** Validate a CourtierConfig is well-formed */
+/** Validate a CourtierConfig is well-formed (business rules beyond schema) */
 export function validateCourtierConfig(config: CourtierConfig): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 

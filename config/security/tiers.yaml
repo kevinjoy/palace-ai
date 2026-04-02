@@ -47,4 +47,6 @@ tiers:
     network: free_outbound
 
   diplomatic_pouch:
+    access: none
+    sync: agreement
     agreements: []

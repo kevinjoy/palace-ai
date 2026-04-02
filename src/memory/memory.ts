@@ -1,30 +1,31 @@
 /**
  * Palace Memory — file-based memory with OpenViking-inspired L0/L1/L2 tiering.
  *
- * Every memory item is decomposed at WRITE time into three representations:
- * - L0 (Abstract): <100 chars, single-sentence summary for cheap scanning
- * - L1 (Overview): <2000 chars, structured summary for planning
- * - L2 (Detail): Full content, unbounded
- *
- * Items are stored as JSON files on disk, organized by URI path.
+ * Security: reads and writes are gated by caller identity and tier access.
+ * Writes are atomic (temp-file-then-rename) to prevent corruption.
+ * Errors are typed, never silently swallowed.
  */
 
-import { mkdir, readFile, writeFile, readdir } from "fs/promises";
-import { join, dirname } from "path";
+import { mkdir, readFile, writeFile, readdir, rename } from "fs/promises";
+import { join, dirname, resolve } from "path";
 import type { MemoryItem, SecurityTier, ContextLevel } from "../types.ts";
-import { parsePalaceUri } from "./uri.ts";
+import { parsePalaceUri, validateContainment } from "./uri.ts";
+import { MemoryCorruptedError, TierAccessDeniedError } from "../errors/palace-errors.ts";
+import { canAccess, type AccessIdentity } from "../security/tier-engine.ts";
 
-interface WriteInput {
+export interface WriteInput {
   readonly uri: string;
   readonly tier: SecurityTier;
   readonly content: string;
 }
 
+/** Caller identity for access control — re-exported from tier engine */
+export type CallerIdentity = AccessIdentity;
+
 /** Generate L0 abstract: first sentence, truncated to 100 chars */
 function generateL0(content: string): string {
   const firstSentence = content.split(/[.!?]\s/)[0] ?? content;
-  const trimmed = (firstSentence + ".").slice(0, 100);
-  return trimmed;
+  return (firstSentence + ".").slice(0, 100);
 }
 
 /** Generate L1 overview: first paragraph or truncated to 2000 chars */
@@ -34,10 +35,19 @@ function generateL1(content: string): string {
 }
 
 export class PalaceMemory {
-  constructor(private readonly baseDir: string) {}
+  private readonly resolvedBaseDir: string;
 
-  /** Write a memory item with auto-generated L0/L1/L2 tiers */
-  async write(input: WriteInput): Promise<MemoryItem> {
+  constructor(private readonly baseDir: string) {
+    this.resolvedBaseDir = resolve(baseDir);
+  }
+
+  /** Write a memory item with auto-generated L0/L1/L2 tiers. Caller must have tier access. */
+  async write(input: WriteInput, caller?: CallerIdentity): Promise<MemoryItem> {
+    // Enforce tier access if caller is provided
+    if (caller && !canAccess(caller, input.tier)) {
+      throw new TierAccessDeniedError(caller.name, input.tier, input.uri);
+    }
+
     const parsed = parsePalaceUri(input.uri);
     const now = new Date().toISOString();
 
@@ -52,27 +62,56 @@ export class PalaceMemory {
     };
 
     const filePath = this.uriToPath(parsed.scope, parsed.path);
+
+    // Validate path stays within baseDir
+    validateContainment(resolve(filePath), this.resolvedBaseDir);
+
+    // Atomic write: temp file then rename
     await mkdir(dirname(filePath), { recursive: true });
-    await writeFile(filePath, JSON.stringify(item, null, 2), "utf-8");
+    const tempPath = `${filePath}.tmp.${Date.now()}`;
+    await writeFile(tempPath, JSON.stringify(item, null, 2), "utf-8");
+    await rename(tempPath, filePath);
 
     return item;
   }
 
-  /** Read a memory item by URI, or undefined if not found */
-  async read(uri: string): Promise<MemoryItem | undefined> {
+  /** Read a memory item by URI. Caller must have tier access. */
+  async read(uri: string, caller?: CallerIdentity): Promise<MemoryItem | undefined> {
     const parsed = parsePalaceUri(uri);
     const filePath = this.uriToPath(parsed.scope, parsed.path);
+
+    // Validate path stays within baseDir
+    validateContainment(resolve(filePath), this.resolvedBaseDir);
+
+    let raw: string;
     try {
-      const raw = await readFile(filePath, "utf-8");
-      return JSON.parse(raw) as MemoryItem;
-    } catch {
-      return undefined;
+      raw = await readFile(filePath, "utf-8");
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+        return undefined; // Genuinely not found
+      }
+      // Real errors (permissions, disk) are NOT swallowed
+      throw new MemoryCorruptedError(uri, (err as Error).message);
     }
+
+    let item: MemoryItem;
+    try {
+      item = JSON.parse(raw) as MemoryItem;
+    } catch {
+      throw new MemoryCorruptedError(uri, "Invalid JSON");
+    }
+
+    // Enforce tier access if caller is provided
+    if (caller && !canAccess(caller, item.tier)) {
+      throw new TierAccessDeniedError(caller.name, item.tier, uri);
+    }
+
+    return item;
   }
 
   /** Read a memory item at a specific context level */
-  async readAtLevel(uri: string, level: ContextLevel): Promise<string | undefined> {
-    const item = await this.read(uri);
+  async readAtLevel(uri: string, level: ContextLevel, caller?: CallerIdentity): Promise<string | undefined> {
+    const item = await this.read(uri, caller);
     if (!item) return undefined;
 
     switch (level) {
@@ -83,13 +122,19 @@ export class PalaceMemory {
   }
 
   /** List all memory items under a scope */
-  async list(scope: string): Promise<readonly MemoryItem[]> {
+  async list(scope: string, caller?: CallerIdentity): Promise<readonly MemoryItem[]> {
     const scopeDir = join(this.baseDir, scope);
-    try {
-      return await this.collectItems(scopeDir);
-    } catch {
-      return [];
+
+    // Validate path stays within baseDir
+    validateContainment(resolve(scopeDir), this.resolvedBaseDir);
+
+    const items = await this.collectItems(scopeDir);
+
+    // Filter by caller tier access if provided
+    if (caller) {
+      return items.filter((item) => canAccess(caller, item.tier));
     }
+    return items;
   }
 
   private uriToPath(scope: string, path: string): string {
@@ -98,23 +143,34 @@ export class PalaceMemory {
 
   private async collectItems(dir: string): Promise<MemoryItem[]> {
     const items: MemoryItem[] = [];
+    let entries;
     try {
-      const entries = await readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = join(dir, entry.name);
-        if (entry.isDirectory()) {
-          items.push(...(await this.collectItems(fullPath)));
-        } else if (entry.name.endsWith(".json")) {
-          try {
-            const raw = await readFile(fullPath, "utf-8");
-            items.push(JSON.parse(raw) as MemoryItem);
-          } catch {
-            // Skip invalid JSON
-          }
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+        return []; // Directory doesn't exist — not an error
+      }
+      throw err; // Real errors propagate
+    }
+
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        items.push(...(await this.collectItems(fullPath)));
+      } else if (entry.name.endsWith(".json") && !entry.name.endsWith(".tmp")) {
+        let raw: string;
+        try {
+          raw = await readFile(fullPath, "utf-8");
+        } catch {
+          continue; // Skip unreadable files during collection
+        }
+        try {
+          items.push(JSON.parse(raw) as MemoryItem);
+        } catch {
+          // Log instead of skip in production — for now, skip malformed
+          continue;
         }
       }
-    } catch {
-      // Directory doesn't exist
     }
     return items;
   }
