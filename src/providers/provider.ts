@@ -52,6 +52,7 @@ export interface ProviderTask {
   readonly model?: string;
   readonly maxTokens?: number;
   readonly temperature?: number;
+  readonly signal?: AbortSignal;
 }
 
 /**
