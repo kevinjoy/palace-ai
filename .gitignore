@@ -1,1 +1,5 @@
 .DS_Store
+references/
+.claude/settings.local.json
+.claude/.structure-hash
+.claude/*.local.md
