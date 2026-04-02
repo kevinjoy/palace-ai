@@ -50,6 +50,24 @@ graph LR
             viz_idx["index.ts"]
             viz["vizier.ts<br/>Orchestrator"]
         end
+
+        subgraph events["events/"]
+            ebus["event-bus.ts<br/>Typed pub/sub"]
+        end
+
+        subgraph errors["errors/"]
+            perr["palace-errors.ts<br/>8 error types"]
+        end
+
+        subgraph observability["observability/"]
+            logger["logger.ts<br/>Structured JSON"]
+        end
+
+        subgraph integrations["integrations/"]
+            obsidian["obsidian.ts<br/>Vault reader"]
+        end
+
+        schemas["schemas.ts<br/>Zod validation"]
     end
 
     subgraph config["config/"]
@@ -68,11 +86,20 @@ graph LR
     types --> courtiers
     types --> memory
     types --> providers
+    types --> routing
+    schemas --> security
+    schemas --> courtiers
+    security --> memory
     security --> courtiers
     providers --> routing
     routing --> vizier
     courtiers --> vizier
     memory --> vizier
+    events --> vizier
+    integrations --> memory
+    errors --> security
+    errors --> memory
+    errors --> courtiers
     config --> security
     config --> courtiers
 ```
