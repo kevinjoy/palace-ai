@@ -1,0 +1,50 @@
+tiers:
+  crown_jewels:
+    paths:
+      - ~/Documents/Identity/
+      - ~/Documents/Financial/Crypto/
+      - ~/.ssh/
+      - ~/.aws/
+    access: none
+    sync: never
+
+  inner_chamber:
+    paths:
+      - ~/Obsidian/Daily Notes/
+      - ~/Obsidian/Personal Reflections/
+      - ~/Documents/Health/
+    access:
+      - vizier
+      - chaplain
+      - chancellor
+    sync: selective
+    audit: true
+
+  guarded:
+    paths:
+      - ~/OneDrive - Novo/Compensation/
+      - ~/OneDrive - Novo/Client Data/
+    access:
+      account: novo
+      roles:
+        - vizier
+    sync: org-scoped
+    audit: true
+
+  open_court:
+    paths:
+      - ~/Coding Repositories/
+      - ~/Obsidian/Research/
+      - ~/Obsidian/Projects/
+    access: all_trusted
+    sync: git
+    write_back: pr_only
+
+  sandlot:
+    location: nuc:/home/agents/sandlot/
+    access: sandbox_agents
+    sync: copy_in
+    network: free_outbound
+
+  diplomatic_pouch:
+    agreements: []

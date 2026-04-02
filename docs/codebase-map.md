@@ -2,9 +2,80 @@
 
 Single source of truth for all Mermaid diagrams. Other docs reference sections here via anchors.
 
-**Status:** Pre-implementation — these diagrams represent the ARCHITECTURE, not the codebase yet. Updated as code is written.
+**Status:** Phase 1 scaffold implemented. Diagrams reflect both architecture and actual code structure.
 
 ---
+
+## Source Code Structure
+
+```mermaid
+graph LR
+    subgraph src["src/"]
+        index["index.ts<br/>Entry point"]
+        types["types.ts<br/>Core type definitions"]
+
+        subgraph security["security/"]
+            sec_idx["index.ts"]
+            tier["tier-engine.ts<br/>6-tier enforcement"]
+            sec_cfg["config-parser.ts<br/>YAML → SecurityConfig"]
+        end
+
+        subgraph courtiers["courtiers/"]
+            crt_idx["index.ts"]
+            crt_cfg["config-parser.ts<br/>YAML → CourtierConfig"]
+            lifecycle["lifecycle.ts<br/>State machine"]
+            registry["registry.ts<br/>Courtier tracking"]
+        end
+
+        subgraph memory["memory/"]
+            mem_idx["index.ts"]
+            uri["uri.ts<br/>palace:// URIs"]
+            mem["memory.ts<br/>Tiered storage"]
+            counsel["counsel.ts<br/>Counsel Layer"]
+        end
+
+        subgraph routing["routing/"]
+            rt_idx["index.ts"]
+            router["router.ts<br/>Multi-account routing"]
+            analyzer["analyzer.ts<br/>Task complexity"]
+        end
+
+        subgraph providers["providers/"]
+            prov_idx["index.ts"]
+            provider["provider.ts<br/>Provider interface"]
+            prov_reg["registry.ts<br/>Provider tracking"]
+        end
+
+        subgraph vizier["vizier/"]
+            viz_idx["index.ts"]
+            viz["vizier.ts<br/>Orchestrator"]
+        end
+    end
+
+    subgraph config["config/"]
+        palace_yaml["palace.yaml"]
+        subgraph cfg_security["security/"]
+            tiers_yaml["tiers.yaml"]
+        end
+        subgraph cfg_courtiers["courtiers/"]
+            herald_yaml["herald.yaml"]
+            guild_yaml["guild.yaml"]
+            chaplain_yaml["chaplain.yaml"]
+        end
+    end
+
+    types --> security
+    types --> courtiers
+    types --> memory
+    types --> providers
+    security --> courtiers
+    providers --> routing
+    routing --> vizier
+    courtiers --> vizier
+    memory --> vizier
+    config --> security
+    config --> courtiers
+```
 
 ## System Overview
 

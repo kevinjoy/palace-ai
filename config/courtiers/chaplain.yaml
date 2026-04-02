@@ -1,0 +1,38 @@
+courtier:
+  name: chaplain
+  displayName: "The Chaplain"
+  description: "Weaves personal thinking with research into long-form works"
+
+  domain:
+    primary: "Long-form thinking, personal-research synthesis"
+    keywords: ["thinking", "writing", "synthesis", "reflection", "research integration", "essay"]
+
+  security:
+    tierAccess:
+      - open_court
+      - inner_chamber
+    writeScope: "own_workspace + counsel_layer"
+    auditLevel: standard
+
+  operations:
+    heartbeat: "daily"
+    triggers:
+      - "new_obsidian_daily_note"
+      - "research_output_from_guild"
+      - "user_request"
+    outputs:
+      - "draft_essays"
+      - "thinking_summaries"
+      - "counsel_submissions"
+
+  modelPreference:
+    default: sonnet
+    deepWork: opus
+    quick: haiku
+
+  accountScope: personal
+  canUseAccounts:
+    - personal
+
+  status: dormant
+  activatedInPhase: 1

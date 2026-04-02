@@ -1,0 +1,47 @@
+palace:
+  version: "0.1.0"
+  name: "Palace AI"
+
+  # Principal (the human operator)
+  principal:
+    name: "Kevin"
+
+  # Active phase
+  phase: 1
+
+  # Provider registry — model-agnostic
+  providers:
+    - id: claude-personal
+      type: cli
+      command: claude
+      configDir: ~/.claude
+      accounts: [personal]
+
+    - id: claude-novo
+      type: cli
+      command: claude
+      configDir: ~/.claude-novo
+      accounts: [novo]
+
+    - id: codex
+      type: cli
+      command: codex
+      accounts: [personal]
+
+    - id: gemini
+      type: cli
+      command: gemini
+      accounts: [personal]
+
+  # Default model routing
+  routing:
+    strategic: claude-personal    # Opus for architecture, planning
+    implementation: claude-personal  # Sonnet for coding
+    routine: claude-personal      # Haiku for simple tasks
+    sensitive_novo: claude-novo   # Novo account for sensitive work
+
+  # Active courtiers for current phase
+  activeCourtiers:
+    - herald
+    - guild
+    - chaplain

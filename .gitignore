@@ -1,5 +1,26 @@
+# OS
 .DS_Store
-references/
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Test
+coverage/
+
+# IDE
+.cursor/
+
+# Palace - local config
 .claude/settings.local.json
 .claude/.structure-hash
 .claude/*.local.md
+
+# Reference repos (cloned for study, not committed)
+references/
+
+# Bun
+bun.lock

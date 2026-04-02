@@ -1,0 +1,40 @@
+courtier:
+  name: guild
+  displayName: "The Lord of Guild"
+  description: "Research projects coordination with sub-guildmaster spawning"
+
+  domain:
+    primary: "Research orchestration and knowledge synthesis"
+    keywords: ["research", "investigate", "analyze", "study", "explore", "literature"]
+
+  security:
+    tierAccess:
+      - open_court
+      - guarded
+    writeScope: "own_workspace + counsel_layer"
+    auditLevel: standard
+
+  operations:
+    heartbeat: "daily"
+    triggers:
+      - "research_request"
+      - "new_information_discovery"
+      - "project_milestone"
+      - "user_request"
+    outputs:
+      - "research_findings"
+      - "analysis_reports"
+      - "counsel_submissions"
+
+  modelPreference:
+    default: sonnet
+    deepWork: opus
+    quick: haiku
+
+  accountScope: personal
+  canUseAccounts:
+    - personal
+    - novo
+
+  status: dormant
+  activatedInPhase: 1

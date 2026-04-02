@@ -1,0 +1,37 @@
+courtier:
+  name: herald
+  displayName: "The Herald/Chamberlain"
+  description: "Daily prep, task coordination, reporting, and communications triage"
+
+  domain:
+    primary: "Daily preparation, task coordination, reporting"
+    keywords: ["daily", "prep", "todo", "schedule", "brief", "report", "communications"]
+
+  security:
+    tierAccess:
+      - open_court
+    writeScope: "own_workspace + counsel_layer"
+    auditLevel: standard
+
+  operations:
+    heartbeat: "daily"
+    triggers:
+      - "morning_cron"
+      - "new_counsel_submission"
+      - "user_request"
+    outputs:
+      - "daily_brief"
+      - "task_summaries"
+      - "communications_digest"
+
+  modelPreference:
+    default: haiku
+    deepWork: sonnet
+    quick: haiku
+
+  accountScope: personal
+  canUseAccounts:
+    - personal
+
+  status: dormant
+  activatedInPhase: 1
