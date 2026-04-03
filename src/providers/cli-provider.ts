@@ -10,7 +10,7 @@
  * (e.g., CLAUDE_CONFIG_DIR for multi-account isolation).
  */
 
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
 import type { Provider, ProviderTask, ProviderResult, ProviderStatus, ModelInfo, TokenUsage } from "./provider.ts";
 import type { ProviderId } from "../types.ts";
 import { ProviderUnavailableError } from "../errors/palace-errors.ts";
@@ -88,10 +88,23 @@ function parseClaudeContent(output: unknown): string {
 export class CLIProvider implements Provider {
   readonly id: ProviderId;
   private readonly config: CLIProviderConfig;
+  private resolvedCommand: string | undefined;
 
   constructor(config: CLIProviderConfig) {
     this.id = config.id;
     this.config = config;
+  }
+
+  /** Resolve the full path to the CLI command (cached) */
+  private getCommand(): string {
+    if (!this.resolvedCommand) {
+      try {
+        this.resolvedCommand = execSync(`which ${this.config.command}`, { encoding: "utf-8" }).trim();
+      } catch {
+        this.resolvedCommand = this.config.command; // Fallback to raw command
+      }
+    }
+    return this.resolvedCommand;
   }
 
   async execute(task: ProviderTask): Promise<ProviderResult> {
@@ -109,9 +122,10 @@ export class CLIProvider implements Provider {
     const startTime = Date.now();
 
     return new Promise<ProviderResult>((resolve, reject) => {
-      const proc = spawn(this.config.command, args, {
+      const proc = spawn(this.getCommand(), args, {
         env,
         stdio: ["ignore", "pipe", "pipe"],
+        cwd: process.cwd(),
       });
 
       let stdout = "";
@@ -172,8 +186,9 @@ export class CLIProvider implements Provider {
   async status(): Promise<ProviderStatus> {
     // Check if the CLI command exists by running --version
     return new Promise<ProviderStatus>((resolve) => {
-      const proc = spawn(this.config.command, ["--version"], {
+      const proc = spawn(this.getCommand(), ["--version"], {
         stdio: ["ignore", "pipe", "pipe"],
+        cwd: process.cwd(),
       });
 
       proc.on("close", (code) => {
