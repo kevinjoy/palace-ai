@@ -112,7 +112,6 @@ export class CLIProvider implements Provider {
       const proc = spawn(this.config.command, args, {
         env,
         stdio: ["ignore", "pipe", "pipe"],
-        shell: true,
       });
 
       let stdout = "";
@@ -135,7 +134,7 @@ export class CLIProvider implements Provider {
         if (code !== 0) {
           reject(new ProviderUnavailableError(
             this.id,
-            `CLI exited with code ${code}: ${stderr.slice(0, 500)}`,
+            `CLI exited with code ${code}. stderr: ${stderr.slice(0, 500) || "(empty)"}. stdout: ${stdout.slice(0, 200) || "(empty)"}`,
           ));
           return;
         }
@@ -174,9 +173,7 @@ export class CLIProvider implements Provider {
     // Check if the CLI command exists by running --version
     return new Promise<ProviderStatus>((resolve) => {
       const proc = spawn(this.config.command, ["--version"], {
-        stdio: ["pipe", "pipe", "pipe"],
-        shell: true,
-        env: process.env as Record<string, string>,
+        stdio: ["ignore", "pipe", "pipe"],
       });
 
       proc.on("close", (code) => {
