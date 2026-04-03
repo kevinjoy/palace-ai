@@ -4,7 +4,12 @@
   "description": "Personal agentic infrastructure using a court organizational metaphor",
   "type": "module",
   "private": true,
+  "bin": {
+    "palace": "./src/cli.ts"
+  },
   "scripts": {
+    "palace": "bun run src/cli.ts",
+    "start": "bun run src/cli.ts start",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

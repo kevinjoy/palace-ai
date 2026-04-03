@@ -68,6 +68,8 @@ graph LR
         end
 
         schemas["schemas.ts<br/>Zod validation"]
+        boot["boot.ts<br/>Wire all subsystems"]
+        cli["cli.ts<br/>CLI entry point"]
     end
 
     subgraph config["config/"]
@@ -102,6 +104,14 @@ graph LR
     errors --> courtiers
     config --> security
     config --> courtiers
+    boot --> vizier
+    boot --> routing
+    boot --> memory
+    boot --> courtiers
+    boot --> providers
+    boot --> events
+    boot --> observability
+    cli --> boot
 ```
 
 ## System Overview
