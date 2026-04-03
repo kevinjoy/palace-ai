@@ -14,7 +14,8 @@ Personal agentic infrastructure using a court organizational metaphor. A Grand V
 8. **Copy-in, PR-out.** Agents get read-only copies. Write-back only through review/PR process.
 9. **File-based first, database later.** Human-readable markdown and YAML in Phase 1. Database backing in Phase 2.
 10. **Test at every boundary.** TDD for structural code. PromptFoo evaluation for agent behavior. Red team for security.
-11. **UX is open for exploration.** Phase 1 is TUI. Long-term UX direction (spatial, dashboard, hybrid) is explicitly undecided.
+11. **Structured data first, rendered text second.** Core produces typed data. Renderers (TUI, web, mobile, visionOS) format it. No `console.log` in core logic — cli.ts is a renderer, not the app.
+12. **Multi-target UX.** Phase 1: TUI. Phase 3: web/mobile dashboard. Phase 5: Apple Vision Pro spatial computing (Raja in the throne room). The court metaphor is inherently spatial.
 
 ## Architecture References
 

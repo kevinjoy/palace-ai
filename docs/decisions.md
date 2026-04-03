@@ -4,6 +4,14 @@ Timestamped record of architectural and design decisions. Newest first.
 
 ---
 
+## 2026-04-03 (continued)
+
+### D-016: Apple Vision Pro as first-class UX target (Phase 5)
+- **Decision:** Palace will target visionOS/SwiftUI as a spatial computing interface. The court metaphor maps to a 3D throne room where the Raja surveys courtier output positioned around the space.
+- **Rationale:** Kevin evaluates terminal output all day without compositing/editing. Spatial computing eliminates the "suffocated for space" constraint. The court metaphor is inherently spatial.
+- **Impact:** Renderer abstraction added to architecture — Palace core produces structured data, renderers format for each target (TUI, web, mobile, visionOS). No renderer-specific formatting in core logic.
+- **Timeline:** Phase 5 (late). No special code now, but architectural discipline required from day one.
+
 ## 2026-04-03
 
 ### D-015: UX direction explicitly left open for exploration

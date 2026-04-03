@@ -12,9 +12,9 @@ Palace AI is a personal agentic infrastructure built on Claude Code, using a cou
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  INTERFACE LAYER                                 │
-│  Dashboard, Obsidian integration, cmux terminal  │
-│  (Phase 2-3)                                     │
+│  INTERFACE LAYER (multi-target rendering)        │
+│  TUI · Web Dashboard · Mobile · Vision Pro       │
+│  All renderers consume the same structured data  │
 ├─────────────────────────────────────────────────┤
 │  HARNESS LAYER (Phase 1 focus)                   │
 │  Vizier · Courtiers · Memory · Token Router      │
@@ -265,17 +265,73 @@ See [@docs/codebase-map.md — Phase Evolution](codebase-map.md#phase-evolution)
 - Courtier heartbeat model fully operational
 
 ### Phase 3: Interface (Dashboard + Collaboration)
-- Dashboard/messaging interface for daily interaction
+- Web dashboard for daily interaction (responsive: desktop, tablet, mobile)
 - Bidirectional Obsidian integration
 - Full Courtier activation (Chancellor, Master at Arms, Ambassadors)
 - Pixel Agents-inspired visualization of court activity
 - Real-time Courtier status and work tracking
 
-### Phase 4+: Expansion
+### Phase 4: Expansion
 - Ganglionic center (distributed insight commons)
 - Multi-operator support (beyond single user)
 - Cross-organization collaboration via Diplomatic Pouch
 - Self-improving agent patterns (skill accumulation, behavior adaptation)
+
+### Phase 5: Spatial Computing (Apple Vision Pro)
+- **visionOS native app** — Palace as a spatial court experience
+- Courtiers as positioned panels/volumes in the user's space
+- The Raja (Kevin) at the center, surveying the court in 360°
+- Terminal outputs as floating windows, arrangeable spatially
+- Counsel Layer as a shared table courtiers present at
+- Real-time courtier activity visualized as presence/motion (Pixel Agents evolved to 3D)
+- Voice-driven interaction with Finn (spatial audio)
+- **Why:** Kevin evaluates terminal output all day but doesn't composite or edit — spatial computing removes the "suffocated for space" constraint of flat screens
+- **Note:** This is a late-phase aspiration. It requires no special code NOW but does require architectural discipline: **structured data first, rendered text second.**
+
+## Renderer Abstraction (Multi-Target UX)
+
+Palace's core produces **structured data**. Renderers turn it into visual output for each target platform. This separation is what makes TUI, web, mobile, and Vision Pro all possible without forking the core.
+
+```
+┌─────────────────────────────────────────────────┐
+│  PALACE CORE (structured data output)            │
+│  Counsel items, courtier status, task results,   │
+│  event streams, memory items — all typed JSON    │
+└──────────────┬──────────────────────────────────┘
+               │
+    ┌──────────┼──────────┬──────────┬────────────┐
+    ▼          ▼          ▼          ▼            ▼
+┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌──────────┐
+│  TUI   │ │  Web   │ │ Mobile │ │ cmux   │ │ visionOS │
+│ CLI    │ │ React  │ │ tablet │ │terminal│ │ spatial  │
+│ stdout │ │ dash   │ │ phone  │ │ panes  │ │ volumes  │
+└────────┘ └────────┘ └────────┘ └────────┘ └──────────┘
+ Phase 1    Phase 3    Phase 3    Phase 3     Phase 5
+```
+
+**Architectural rule:** No renderer-specific formatting in the core. The Vizier, Courtiers, memory system, and routing engine produce structured data (typed interfaces). The CLI formats it for the terminal. A future web dashboard renders it as React components. visionOS renders it as spatial panels. The core doesn't know or care which renderer is consuming its output.
+
+**Practical implication for current code:** The `cli.ts` module is a renderer. When we build new features, the output should be a typed return value that `cli.ts` formats, not `console.log` embedded in core logic. This discipline pays off when the second renderer (web dashboard or Vision Pro) arrives.
+
+### UX Target Roadmap
+
+| Phase | Target | Technology | Notes |
+|-------|--------|-----------|-------|
+| 1 | TUI (CLI) | Bun + stdout | Current — `palace` command |
+| 3 | Web dashboard | React + WebSocket | Paperclip-inspired, responsive |
+| 3 | Mobile/tablet | Responsive web | Same dashboard, responsive layout |
+| 3 | Terminal panes | cmux integration | Spatial tabs per courtier |
+| 5 | Apple Vision Pro | visionOS + SwiftUI | Spatial court — Raja at center, courtiers as volumes |
+
+### Vision Pro Design Concepts (Phase 5, aspirational)
+
+The court metaphor maps naturally to spatial computing:
+
+- **Throne room layout:** Kevin (the Raja) sits at the center. Courtier panels are positioned around the space — Guild research to the left, Herald's daily brief front-center, Chaplain's drafts to the right.
+- **Presence as status:** Active courtiers are bright, prominent volumes. Dormant courtiers fade. Suspended courtiers dim with a pulse.
+- **Counsel table:** A shared surface where courtier outputs land as cards. Swipe to promote, dismiss, or dive deeper (L0 → L1 → L2).
+- **Voice interaction:** "Finn, what's the Guild working on?" → spatial audio response from the Guild's position.
+- **Terminal volumes:** Each courtier's working terminal is a window that can be pulled closer, expanded, or pushed to the periphery. No more fighting for screen real estate.
 
 ## Reference Architecture Influences
 
