@@ -1,6 +1,5 @@
 /**
  * Courtier Registry — tracks active courtiers and their state.
- * Full implementation in Step 3 (INTERN-55).
  */
 
 import type { CourtierConfig, CourtierStatus } from "../types.ts";

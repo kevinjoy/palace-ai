@@ -166,4 +166,190 @@ describe("PalaceMemory", () => {
       expect(item!.tier).toBe("inner_chamber");
     });
   });
+
+  describe("L0 generation (ISC-14)", () => {
+    it("skips markdown headings and uses first real sentence", async () => {
+      await memory.write({
+        uri: "palace://court/guild/findings/headed",
+        tier: "open_court",
+        content: "# Research Report\n\nQuantum computing made significant breakthroughs in 2026. The field advanced rapidly.",
+      });
+
+      const item = await memory.read("palace://court/guild/findings/headed");
+      expect(item!.l0).toBe("Quantum computing made significant breakthroughs in 2026.");
+      expect(item!.l0.length).toBeLessThanOrEqual(100);
+    });
+
+    it("uses whole content as L0 when very short (<100 chars)", async () => {
+      await memory.write({
+        uri: "palace://court/herald/briefs/short",
+        tier: "open_court",
+        content: "Quick note about today",
+      });
+
+      const item = await memory.read("palace://court/herald/briefs/short");
+      expect(item!.l0).toBe("Quick note about today.");
+    });
+
+    it("returns (empty) for empty content", async () => {
+      await memory.write({
+        uri: "palace://court/herald/briefs/empty",
+        tier: "open_court",
+        content: "",
+      });
+
+      const item = await memory.read("palace://court/herald/briefs/empty");
+      expect(item!.l0).toBe("(empty)");
+    });
+
+    it("returns (empty) for whitespace-only content", async () => {
+      await memory.write({
+        uri: "palace://court/herald/briefs/whitespace",
+        tier: "open_court",
+        content: "   \n\n  ",
+      });
+
+      const item = await memory.read("palace://court/herald/briefs/whitespace");
+      expect(item!.l0).toBe("(empty)");
+    });
+
+    it("ends with proper punctuation", async () => {
+      await memory.write({
+        uri: "palace://court/guild/findings/nopunct",
+        tier: "open_court",
+        content: "A finding without punctuation at end",
+      });
+
+      const item = await memory.read("palace://court/guild/findings/nopunct");
+      expect(item!.l0).toMatch(/[.!?]$/);
+    });
+
+    it("extracts heading text when content has only headings", async () => {
+      await memory.write({
+        uri: "palace://court/guild/findings/headonly",
+        tier: "open_court",
+        content: "# Architecture Overview\n## Phase 1\n## Phase 2",
+      });
+
+      const item = await memory.read("palace://court/guild/findings/headonly");
+      expect(item!.l0).toBe("Architecture Overview.");
+      expect(item!.l0.length).toBeLessThanOrEqual(100);
+    });
+
+    it("truncates long first sentences at word boundary", async () => {
+      await memory.write({
+        uri: "palace://court/guild/findings/longsentence",
+        tier: "open_court",
+        content: "This is an extraordinarily long first sentence that goes on and on about many different topics without ever reaching a period or any other sentence-ending punctuation mark whatsoever.",
+      });
+
+      const item = await memory.read("palace://court/guild/findings/longsentence");
+      expect(item!.l0.length).toBeLessThanOrEqual(100);
+      expect(item!.l0).toMatch(/\.\.\.$/);
+    });
+  });
+
+  describe("L1 generation (ISC-15)", () => {
+    it("includes heading outline when content has headings", async () => {
+      await memory.write({
+        uri: "palace://court/guild/findings/structured",
+        tier: "open_court",
+        content: "# Research Report\n\nIntroduction paragraph here.\n\n## Methodology\n\nWe used surveys.\n\n## Results\n\nKey findings follow.",
+      });
+
+      const item = await memory.read("palace://court/guild/findings/structured");
+      expect(item!.l1).toContain("Outline:");
+      expect(item!.l1).toContain("Research Report");
+      expect(item!.l1).toContain("Methodology");
+      expect(item!.l1).toContain("Results");
+    });
+
+    it("includes first 3 bullet items", async () => {
+      await memory.write({
+        uri: "palace://court/guild/findings/bulleted",
+        tier: "open_court",
+        content: "Summary of findings:\n\n- First important point\n- Second important point\n- Third important point\n- Fourth point should not appear",
+      });
+
+      const item = await memory.read("palace://court/guild/findings/bulleted");
+      expect(item!.l1).toContain("Key points:");
+      expect(item!.l1).toContain("First important point");
+      expect(item!.l1).toContain("Second important point");
+      expect(item!.l1).toContain("Third important point");
+      expect(item!.l1).not.toContain("Fourth point should not appear");
+    });
+
+    it("returns (empty) for empty content", async () => {
+      await memory.write({
+        uri: "palace://court/herald/briefs/emptyl1",
+        tier: "open_court",
+        content: "",
+      });
+
+      const item = await memory.read("palace://court/herald/briefs/emptyl1");
+      expect(item!.l1).toBe("(empty)");
+    });
+
+    it("uses full content when very short (<50 chars)", async () => {
+      await memory.write({
+        uri: "palace://court/herald/briefs/tiny",
+        tier: "open_court",
+        content: "Short memo",
+      });
+
+      const item = await memory.read("palace://court/herald/briefs/tiny");
+      expect(item!.l1).toBe("Short memo");
+    });
+
+    it("respects 2000 char limit even with headings and bullets", async () => {
+      const longContent = "First paragraph. ".repeat(100) + "\n\n## Section\n\n" + "- Bullet item\n".repeat(50);
+      await memory.write({
+        uri: "palace://court/guild/findings/longl1",
+        tier: "open_court",
+        content: longContent,
+      });
+
+      const item = await memory.read("palace://court/guild/findings/longl1");
+      expect(item!.l1.length).toBeLessThanOrEqual(2000);
+      expect(item!.l1.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("edge cases (ISC-16)", () => {
+    it("handles content with only bullet points", async () => {
+      await memory.write({
+        uri: "palace://court/herald/briefs/bullets-only",
+        tier: "open_court",
+        content: "- Item one\n- Item two\n- Item three",
+      });
+
+      const item = await memory.read("palace://court/herald/briefs/bullets-only");
+      expect(item!.l0.length).toBeGreaterThan(0);
+      expect(item!.l0.length).toBeLessThanOrEqual(100);
+      expect(item!.l1).toContain("Key points:");
+    });
+
+    it("handles multi-level headings correctly", async () => {
+      await memory.write({
+        uri: "palace://court/guild/findings/multihead",
+        tier: "open_court",
+        content: "## Overview\n\nThe system works well.\n\n### Details\n\nMore info here.",
+      });
+
+      const item = await memory.read("palace://court/guild/findings/multihead");
+      expect(item!.l0).toBe("The system works well.");
+    });
+
+    it("L0 equals L1 for very short content", async () => {
+      await memory.write({
+        uri: "palace://court/herald/briefs/eq",
+        tier: "open_court",
+        content: "Done.",
+      });
+
+      const item = await memory.read("palace://court/herald/briefs/eq");
+      expect(item!.l0).toBe("Done.");
+      expect(item!.l1).toBe("Done.");
+    });
+  });
 });

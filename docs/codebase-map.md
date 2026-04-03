@@ -2,7 +2,7 @@
 
 Single source of truth for all Mermaid diagrams. Other docs reference sections here via anchors.
 
-**Status:** Phase 1 scaffold implemented. Diagrams reflect both architecture and actual code structure.
+**Status:** Phase 1 complete + INTERN-70 hardening. Courtiers have cognitive psych personas, memory has enriched L0/L1, heartbeat executes real work via providers. 192 tests across 20 files.
 
 ---
 
@@ -43,12 +43,13 @@ graph LR
         subgraph providers["providers/"]
             prov_idx["index.ts"]
             provider["provider.ts<br/>Provider interface"]
+            cli_prov["cli-provider.ts<br/>CLI subprocess adapter"]
             prov_reg["registry.ts<br/>Provider tracking"]
         end
 
         subgraph vizier["vizier/"]
             viz_idx["index.ts"]
-            viz["vizier.ts<br/>Orchestrator"]
+            viz["vizier.ts<br/>Orchestrator + heartbeat<br/>+ persona prompts"]
         end
 
         subgraph events["events/"]

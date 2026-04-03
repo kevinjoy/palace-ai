@@ -75,6 +75,14 @@ export interface AgentMessage {
   readonly payload: unknown;
 }
 
+/** Courtier persona — personality and cognitive techniques for system prompts */
+export interface CourtierPersona {
+  readonly traits: readonly string[];
+  readonly communicationStyle: string;
+  readonly cognitiveTechniques: readonly string[];
+  readonly challengeBehavior: string;
+}
+
 /** Courtier configuration as loaded from YAML */
 export interface CourtierConfig {
   readonly name: string;
@@ -84,6 +92,7 @@ export interface CourtierConfig {
     readonly primary: string;
     readonly keywords: readonly string[];
   };
+  readonly persona: CourtierPersona;
   readonly security: {
     readonly tierAccess: readonly SecurityTier[];
     readonly writeScope: string;

@@ -44,6 +44,17 @@ describe("parseCourtierConfig", () => {
     expect(config.modelPreference.quick).toBe("haiku");
   });
 
+  it("parses persona with cognitive techniques", async () => {
+    const yaml = await readFile("config/courtiers/guild.yaml", "utf-8");
+    const config = parseCourtierConfig(yaml);
+
+    expect(config.persona.traits.length).toBeGreaterThan(0);
+    expect(config.persona.communicationStyle).toBeDefined();
+    expect(config.persona.cognitiveTechniques.length).toBeGreaterThan(0);
+    expect(config.persona.challengeBehavior).toBeDefined();
+    expect(config.persona.cognitiveTechniques.some((t: string) => t.includes("Socratic"))).toBe(true);
+  });
+
   it("preserves operation triggers", async () => {
     const yaml = await readFile("config/courtiers/chaplain.yaml", "utf-8");
     const config = parseCourtierConfig(yaml);
@@ -70,6 +81,7 @@ describe("validateCourtierConfig", () => {
       displayName: "Test",
       description: "Test",
       domain: { primary: "test", keywords: [] },
+      persona: { traits: ["test"], communicationStyle: "direct", cognitiveTechniques: ["testing"], challengeBehavior: "push back" },
       security: { tierAccess: ["open_court" as const], writeScope: "own", auditLevel: "standard" as const },
       operations: { heartbeat: "daily", triggers: [], outputs: [] },
       modelPreference: { default: "sonnet", deepWork: "opus", quick: "haiku" },
@@ -90,6 +102,7 @@ describe("validateCourtierConfig", () => {
       displayName: "Test",
       description: "Test",
       domain: { primary: "test", keywords: [] },
+      persona: { traits: ["test"], communicationStyle: "direct", cognitiveTechniques: ["testing"], challengeBehavior: "push back" },
       security: { tierAccess: [] as const, writeScope: "own", auditLevel: "standard" as const },
       operations: { heartbeat: "daily", triggers: [], outputs: [] },
       modelPreference: { default: "sonnet", deepWork: "opus", quick: "haiku" },

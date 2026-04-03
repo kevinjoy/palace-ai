@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAUDE_PLUGIN_ROOT=$HOME/.claude/plugins/cache/claude-plugins-official/hookify/unknown python3 $HOME/.claude/plugins/cache/claude-plugins-official/hookify/unknown/hooks/stop.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

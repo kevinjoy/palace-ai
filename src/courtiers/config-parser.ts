@@ -20,11 +20,27 @@ export function parseCourtierConfig(yamlContent: string): CourtierConfig {
 
   const c = result.data.courtier;
 
+  const defaultPersona = {
+    traits: ["professional", "thorough"],
+    communicationStyle: "Direct and substantive. No filler.",
+    cognitiveTechniques: ["deliberate practice"],
+    challengeBehavior: "Question weak reasoning. Demand evidence.",
+  };
+
+  const rawPersona = c.persona;
+  const persona = rawPersona ? {
+    traits: rawPersona.traits,
+    communicationStyle: (rawPersona.communicationStyle ?? rawPersona.communication_style ?? defaultPersona.communicationStyle),
+    cognitiveTechniques: (rawPersona.cognitiveTechniques ?? rawPersona.cognitive_techniques ?? defaultPersona.cognitiveTechniques),
+    challengeBehavior: (rawPersona.challengeBehavior ?? rawPersona.challenge_behavior ?? defaultPersona.challengeBehavior),
+  } : defaultPersona;
+
   return {
     name: c.name,
     displayName: (c.displayName ?? c.display_name)!,
     description: c.description,
     domain: c.domain,
+    persona,
     security: {
       tierAccess: (c.security.tierAccess ?? c.security.tier_access ?? []) as SecurityTier[],
       writeScope: (c.security.writeScope ?? c.security.write_scope ?? "own_workspace"),

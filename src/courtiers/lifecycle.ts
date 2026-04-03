@@ -1,6 +1,5 @@
 /**
  * Courtier Lifecycle — state machine for courtier status transitions.
- * Full implementation in Step 3 (INTERN-55).
  */
 
 import type { CourtierStatus } from "../types.ts";

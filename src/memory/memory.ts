@@ -22,16 +22,153 @@ export interface WriteInput {
 /** Caller identity for access control — re-exported from tier engine */
 export type CallerIdentity = AccessIdentity;
 
-/** Generate L0 abstract: first sentence, truncated to 100 chars */
-function generateL0(content: string): string {
-  const firstSentence = content.split(/[.!?]\s/)[0] ?? content;
-  return (firstSentence + ".").slice(0, 100);
+const L0_MAX = 100;
+const L1_MAX = 2000;
+const VERY_SHORT_THRESHOLD = 50;
+const EMPTY_PLACEHOLDER = "(empty)";
+
+// Hoisted regex patterns — compiled once, not per-write
+const HEADING_LINE_RE = /^#{1,6}\s/;
+const HEADING_MULTILINE_RE = /^#{1,6}\s/m;
+const HEADING_CAPTURE_RE = /^(#{1,6})\s+(.+)/;
+const HEADING_FIRST_CAPTURE_RE = /^#{1,6}\s+(.+)/m;
+const BULLET_RE = /^\s*[-*+]\s+(.+)/;
+
+/** Strip leading markdown headings (lines starting with #) and return the remaining content */
+function stripLeadingHeadings(content: string): string {
+  const lines = content.split("\n");
+  let start = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed === "" || HEADING_LINE_RE.test(trimmed)) {
+      start = i + 1;
+    } else {
+      break;
+    }
+  }
+  return lines.slice(start).join("\n").trim();
 }
 
-/** Generate L1 overview: first paragraph or truncated to 2000 chars */
+function hasSentencePunctuation(text: string): boolean {
+  return text.endsWith(".") || text.endsWith("!") || text.endsWith("?");
+}
+
+function ensurePunctuation(text: string): string {
+  return hasSentencePunctuation(text) ? text : text + ".";
+}
+
+/** Extract the first real sentence from text, ending with proper punctuation */
+function extractFirstSentence(text: string): string {
+  const match = text.match(/[^.!?]*[.!?]/);
+  if (match) {
+    return match[0].trim();
+  }
+  return ensurePunctuation(text.trim());
+}
+
+/** Check if content contains markdown headings */
+function hasHeadings(content: string): boolean {
+  return HEADING_MULTILINE_RE.test(content);
+}
+
+/** Generate L0 abstract: smart first-sentence extraction, max 100 chars */
+function generateL0(content: string): string {
+  const trimmed = content.trim();
+
+  // Empty content
+  if (trimmed.length === 0) {
+    return EMPTY_PLACEHOLDER;
+  }
+
+  // If content has headings, always try to extract body text first
+  if (hasHeadings(trimmed)) {
+    const body = stripLeadingHeadings(trimmed);
+
+    if (body.length === 0) {
+      // Content is only headings — use the first heading text
+      const headingMatch = trimmed.match(HEADING_FIRST_CAPTURE_RE);
+      if (headingMatch) {
+        return ensurePunctuation(headingMatch[1].trim()).slice(0, L0_MAX);
+      }
+    } else {
+      const sentence = extractFirstSentence(body);
+      if (sentence.length <= L0_MAX) {
+        return sentence;
+      }
+      const truncated = sentence.slice(0, L0_MAX - 3);
+      const lastSpace = truncated.lastIndexOf(" ");
+      return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
+    }
+  }
+
+  // Very short content without headings — use it directly
+  if (trimmed.length <= L0_MAX) {
+    return ensurePunctuation(trimmed).slice(0, L0_MAX);
+  }
+
+  // Standard content — extract first sentence
+  const sentence = extractFirstSentence(trimmed);
+  if (sentence.length <= L0_MAX) {
+    return sentence;
+  }
+  // Truncate long sentences at word boundary with ellipsis
+  const truncated = sentence.slice(0, L0_MAX - 3);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
+}
+
+/** Extract headings and bullets from content in a single pass over lines */
+function extractStructure(lines: readonly string[], maxBullets: number): { headings: string[]; bullets: string[] } {
+  const headings: string[] = [];
+  const bullets: string[] = [];
+  for (const line of lines) {
+    const hMatch = line.match(HEADING_CAPTURE_RE);
+    if (hMatch) {
+      headings.push(hMatch[2].trim());
+      continue;
+    }
+    if (bullets.length < maxBullets) {
+      const bMatch = line.match(BULLET_RE);
+      if (bMatch) {
+        bullets.push(bMatch[1].trim());
+      }
+    }
+  }
+  return { headings, bullets };
+}
+
+/** Generate L1 overview: structured summary with headings and bullets, max 2000 chars */
 function generateL1(content: string): string {
-  const firstParagraph = content.split(/\n\n/)[0] ?? content;
-  return firstParagraph.slice(0, 2000);
+  const trimmed = content.trim();
+
+  // Empty content
+  if (trimmed.length === 0) {
+    return EMPTY_PLACEHOLDER;
+  }
+
+  // Single-pass structure extraction
+  const lines = trimmed.split("\n");
+  const { headings, bullets } = extractStructure(lines, 3);
+
+  // Very short content with no structural elements — use it directly
+  if (trimmed.length <= VERY_SHORT_THRESHOLD && headings.length === 0 && bullets.length === 0) {
+    return trimmed;
+  }
+
+  // Start with first paragraph
+  const firstParagraph = trimmed.split(/\n\n/)[0] ?? trimmed;
+  const parts: string[] = [firstParagraph];
+
+  if (headings.length > 0) {
+    parts.push("\n\nOutline: " + headings.join(" | "));
+  }
+
+  if (bullets.length > 0) {
+    parts.push("\n\nKey points:\n" + bullets.map((b) => `- ${b}`).join("\n"));
+  }
+
+  const result = parts.join("");
+  return result.slice(0, L1_MAX);
 }
 
 export class PalaceMemory {

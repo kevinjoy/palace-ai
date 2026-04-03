@@ -212,21 +212,27 @@ async function main(): Promise<void> {
         console.error("Usage: palace heartbeat <courtier-name>");
         process.exit(1);
       }
-      console.log(`\n💓 Triggering heartbeat for ${name}...`);
-      // TODO: Full heartbeat with context injection.
-      // For now, activate if dormant and show status.
-      const courtier = palace.vizier.getCourtStatus().find((c) => c.name === name);
-      if (!courtier) {
-        console.error(`Courtier not found: ${name}`);
+      console.log(`\n💓 Triggering heartbeat for ${name}...\n`);
+
+      try {
+        const result = await palace.vizier.heartbeat(name);
+
+        console.log(`📋 Routing`);
+        console.log(`  Courtier:  ${result.courtier?.displayName ?? "Vizier (direct)"}`);
+        console.log(`  Account:   ${result.decision.account}`);
+        console.log(`  Provider:  ${result.decision.providerId}`);
+        console.log(`  Model:     ${result.decision.model}`);
+        console.log();
+        console.log(`📝 Response`);
+        console.log(`─────────`);
+        console.log(result.content);
+        console.log(`─────────`);
+        console.log(`  Duration: ${result.durationMs}ms | Tokens: in:${result.providerResult.usage.inputTokens} out:${result.providerResult.usage.outputTokens}`);
+        console.log(`  Stored in Counsel Layer ✓\n`);
+      } catch (err) {
+        console.error(`Heartbeat failed: ${(err as Error).message}`);
         process.exit(1);
       }
-      if (courtier.status === "dormant") {
-        palace.vizier.activateCourtier(name);
-        console.log(`  ${name} was dormant — activated.`);
-      }
-      console.log(`  Status: ${courtier.status}`);
-      console.log(`  Domain: ${courtier.domain}`);
-      console.log(`  Heartbeat complete.\n`);
       break;
     }
 

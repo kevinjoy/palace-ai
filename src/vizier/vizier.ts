@@ -198,6 +198,62 @@ export class Vizier {
     await this.counsel.submit(submission, caller);
   }
 
+  /**
+   * Execute a heartbeat for a courtier — gather context, dispatch, return result.
+   *
+   * 1. Activate if dormant
+   * 2. Gather recent Counsel Layer L0 summaries (up to 5)
+   * 3. Build context-injected prompt with courtier role + counsel context + directive
+   * 4. Dispatch via the provider pipeline
+   * 5. Return full DispatchResult
+   */
+  async heartbeat(courtierName: string): Promise<DispatchResult> {
+    // 1. Find courtier
+    const registered = this.registry.get(courtierName);
+    if (!registered) {
+      throw new Error(`Courtier not found: ${courtierName}`);
+    }
+
+    // 2. Activate if dormant
+    if (registered.lifecycle.status === "dormant") {
+      this.activateCourtier(courtierName);
+    }
+
+    // 3. Gather Counsel Layer context (up to 5 most recent L0 summaries)
+    const counselItems = await this.memory.list("counsel");
+    const sorted = [...counselItems].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+    const recentItems = sorted.slice(0, 5);
+    const l0Summaries = recentItems.map((item) => item.l0);
+
+    // 4. Build context-injected heartbeat prompt
+    const config = registered.config;
+    const counselSection = l0Summaries.length > 0
+      ? [
+          "## Recent Court Activity (Counsel Layer)",
+          ...l0Summaries.map((s, i) => `${i + 1}. ${s}`),
+        ].join("\n")
+      : "## Recent Court Activity\nNo recent counsel items.";
+
+    // Include keywords so matchCourtier in dispatch() can route back to this courtier.
+    // Full domain context is in systemPrompt via buildCourtierSystemPrompt.
+    const heartbeatPrompt = [
+      `# Heartbeat: ${config.displayName} — ${config.domain.primary}`,
+      "",
+      counselSection,
+      "",
+      `## Directive`,
+      `Review the court's recent activity. From your domain perspective, identify anything that needs attention, flag concerns, or contribute insights. Be specific.`,
+    ].join("\n");
+
+    // 5. Dispatch via the standard pipeline
+    return this.dispatch({
+      description: heartbeatPrompt,
+      project: "palace-heartbeat",
+    });
+  }
+
   /** Activate a dormant courtier through the full lifecycle */
   activateCourtier(name: string): void {
     this.registry.transition(name, "activating");
@@ -235,14 +291,34 @@ export class Vizier {
   }
 }
 
-/** Build a system prompt that gives the provider the courtier's identity and context */
-function buildCourtierSystemPrompt(courtier: CourtierConfig): string {
+/** Build a system prompt that gives the provider the courtier's identity, persona, and context */
+export function buildCourtierSystemPrompt(courtier: CourtierConfig): string {
+  const persona = courtier.persona;
+
   return [
-    `You are ${courtier.displayName}, a courtier of Palace AI.`,
-    `Your domain: ${courtier.domain.primary}.`,
-    `Your expertise covers: ${courtier.domain.keywords.join(", ")}.`,
+    `# ${courtier.displayName}`,
+    `${courtier.description}`,
     "",
-    "Complete the task from your specialized perspective.",
-    "Be specific and substantive. Focus on actionable output.",
+    `## Domain`,
+    `Primary: ${courtier.domain.primary}`,
+    `Expertise: ${courtier.domain.keywords.join(", ")}`,
+    "",
+    `## Personality`,
+    ...persona.traits.map((t) => `- ${t}`),
+    "",
+    `## Communication Style`,
+    persona.communicationStyle,
+    "",
+    `## Cognitive Techniques`,
+    `Apply these techniques in your work:`,
+    ...persona.cognitiveTechniques.map((t) => `- ${t}`),
+    "",
+    `## Challenge Behavior`,
+    persona.challengeBehavior,
+    "",
+    `## Directives`,
+    `Complete the task from your specialized perspective.`,
+    `Apply your cognitive techniques. Push back on weak inputs.`,
+    `Be specific, substantive, and demanding of quality.`,
   ].join("\n");
 }

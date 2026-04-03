@@ -90,12 +90,21 @@ const ModelPreferenceSchema = z.object({
   quick: z.string(),
 });
 
+/** Courtier persona — personality traits and cognitive techniques */
+const CourtierPersonaSchema = z.object({
+  traits: z.array(z.string()).min(1),
+  communicationStyle: z.string().min(1),
+  cognitiveTechniques: z.array(z.string()).min(1),
+  challengeBehavior: z.string().min(1),
+});
+
 /** Full courtier configuration */
 export const CourtierConfigSchema = z.object({
   name: z.string().min(1),
   displayName: z.string().min(1),
   description: z.string(),
   domain: CourtierDomainSchema,
+  persona: CourtierPersonaSchema,
   security: CourtierSecuritySchema,
   operations: CourtierOperationsSchema,
   modelPreference: ModelPreferenceSchema,
@@ -113,6 +122,15 @@ export const RawCourtierYamlSchema = z.object({
     display_name: z.string().optional(),
     description: z.string(),
     domain: CourtierDomainSchema,
+    persona: z.object({
+      traits: z.array(z.string()).min(1),
+      communicationStyle: z.string().optional(),
+      communication_style: z.string().optional(),
+      cognitiveTechniques: z.array(z.string()).optional(),
+      cognitive_techniques: z.array(z.string()).optional(),
+      challengeBehavior: z.string().optional(),
+      challenge_behavior: z.string().optional(),
+    }).optional(),
     security: z.object({
       tierAccess: z.array(z.string()).optional(),
       tier_access: z.array(z.string()).optional(),
