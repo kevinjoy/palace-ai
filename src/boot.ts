@@ -53,7 +53,7 @@ export interface PalaceInstance {
 
 const PROJECT_ROOT = decodeURIComponent(new URL("..", import.meta.url).pathname).replace(/\/$/, "");
 const CONFIG_DIR = join(PROJECT_ROOT, "config");
-const MEMORY_DIR = join(PROJECT_ROOT, "MEMORY", "PALACE");
+const PALACE_DATA_DIR = join(PROJECT_ROOT, ".palace");
 
 /** Boot Palace AI — load config, wire subsystems, return ready instance */
 export async function boot(configPath?: string): Promise<PalaceInstance> {
@@ -115,8 +115,8 @@ export async function boot(configPath?: string): Promise<PalaceInstance> {
   };
   const router = new TokenRouter(routerConfig);
 
-  // 5. Set up memory and counsel
-  const memory = new PalaceMemory(MEMORY_DIR);
+  // 5. Set up memory and counsel (Palace runtime data in .palace/)
+  const memory = new PalaceMemory(join(PALACE_DATA_DIR, "memory"));
   const counsel = new CounselLayer(memory);
 
   // 6. Load and register courtiers

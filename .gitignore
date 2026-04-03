@@ -14,6 +14,9 @@ coverage/
 # IDE
 .cursor/
 
+# Palace - runtime data (counsel layer, courtier memories, logs, state)
+.palace/
+
 # Palace - local config
 .claude/settings.local.json
 .claude/.structure-hash
