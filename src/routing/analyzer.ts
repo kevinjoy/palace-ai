@@ -31,6 +31,8 @@ const STRATEGIC_KEYWORDS = [
 const IMPLEMENTATION_KEYWORDS = [
   "implement", "build", "write", "create", "function", "class", "module",
   "parse", "validate", "test", "refactor", "fix", "debug", "code",
+  "research", "investigate", "analyze", "study", "explore", "compare",
+  "review", "assess", "evaluate", "trend",
 ];
 
 /** Keywords/tags that indicate Novo-sensitive work */

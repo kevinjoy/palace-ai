@@ -111,7 +111,7 @@ export class CLIProvider implements Provider {
     return new Promise<ProviderResult>((resolve, reject) => {
       const proc = spawn(this.config.command, args, {
         env,
-        stdio: ["pipe", "pipe", "pipe"],
+        stdio: ["ignore", "pipe", "pipe"],
         shell: true,
       });
 
