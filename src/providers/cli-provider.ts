@@ -11,9 +11,18 @@
  */
 
 import { spawn, execSync } from "child_process";
+import { homedir } from "os";
 import type { Provider, ProviderTask, ProviderResult, ProviderStatus, ModelInfo, TokenUsage } from "./provider.ts";
 import type { ProviderId } from "../types.ts";
 import { ProviderUnavailableError } from "../errors/palace-errors.ts";
+
+/** Expand ~ to actual home directory — spawn doesn't do shell expansion */
+function expandTilde(path: string): string {
+  if (path.startsWith("~/")) {
+    return path.replace("~", homedir());
+  }
+  return path;
+}
 
 export interface CLIProviderConfig {
   readonly id: ProviderId;
@@ -115,8 +124,13 @@ export class CLIProvider implements Provider {
     };
 
     // Multi-account isolation via CLAUDE_CONFIG_DIR
+    // Only set if configDir differs from default (~/.claude) to avoid breaking default auth
     if (this.config.configDir && this.config.type === "claude") {
-      env.CLAUDE_CONFIG_DIR = this.config.configDir;
+      const expanded = expandTilde(this.config.configDir);
+      const defaultDir = `${homedir()}/.claude`;
+      if (expanded !== defaultDir) {
+        env.CLAUDE_CONFIG_DIR = expanded;
+      }
     }
 
     const startTime = Date.now();
@@ -145,25 +159,31 @@ export class CLIProvider implements Provider {
       proc.on("close", (code) => {
         const durationMs = Date.now() - startTime;
 
-        if (code !== 0) {
-          reject(new ProviderUnavailableError(
-            this.id,
-            `CLI exited with code ${code}. stderr: ${stderr.slice(0, 500) || "(empty)"}. stdout: ${stdout.slice(0, 200) || "(empty)"}`,
-          ));
-          return;
-        }
-
         let content: string;
         let usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
-        if (this.config.type === "claude") {
+        if (this.config.type === "claude" && stdout.trim().startsWith("{")) {
+          // Claude outputs JSON even on error — parse it first
           try {
             const parsed = JSON.parse(stdout);
+            if (parsed.is_error) {
+              reject(new ProviderUnavailableError(
+                this.id,
+                `Claude error: ${parsed.result ?? "unknown error"}`,
+              ));
+              return;
+            }
             content = parseClaudeContent(parsed);
             usage = parseClaudeUsage(parsed);
           } catch {
             content = stdout.trim();
           }
+        } else if (code !== 0) {
+          reject(new ProviderUnavailableError(
+            this.id,
+            `CLI exited with code ${code}. stderr: ${stderr.slice(0, 500) || "(empty)"}. stdout: ${stdout.slice(0, 200) || "(empty)"}`,
+          ));
+          return;
         } else {
           content = stdout.trim();
         }
