@@ -92,27 +92,60 @@ async function main(): Promise<void> {
     }
 
     case "task": {
-      const description = args.slice(1).join(" ");
+      const executeFlag = args.includes("--execute") || args.includes("-x");
+      const description = args.slice(1).filter((a) => a !== "--execute" && a !== "-x").join(" ");
       if (!description) {
-        console.error("Usage: palace task \"description of the task\"");
+        console.error("Usage: palace task \"description\" [--execute]");
+        console.error("  Without --execute: analyze and show routing (dry run)");
+        console.error("  With --execute/-x: analyze, route, AND execute via provider");
         process.exit(1);
       }
 
-      const decision = palace.vizier.analyzeTask({
-        description,
-        project: "default",
-      });
+      if (executeFlag) {
+        // Full dispatch: analyze → route → execute → store
+        console.log(`\n⚡ Dispatching task...\n`);
 
-      const courtier = palace.vizier.matchCourtier(description);
+        try {
+          const result = await palace.vizier.dispatch({
+            description,
+            project: "default",
+          });
 
-      console.log(`\n📋 Task Analysis`);
-      console.log(`  Description: ${description}`);
-      console.log(`  Account:     ${decision.account}`);
-      console.log(`  Provider:    ${decision.providerId}`);
-      console.log(`  Model:       ${decision.model}`);
-      console.log(`  Courtier:    ${courtier?.displayName ?? "(no match — Vizier handles directly)"}`);
-      console.log(`  Correlation: ${decision.correlationId}`);
-      console.log(`  Reasoning:   ${decision.reasoning}\n`);
+          console.log(`📋 Routing`);
+          console.log(`  Courtier:    ${result.courtier?.displayName ?? "Vizier (direct)"}`);
+          console.log(`  Account:     ${result.decision.account}`);
+          console.log(`  Provider:    ${result.decision.providerId}`);
+          console.log(`  Model:       ${result.decision.model}`);
+          console.log(`  Correlation: ${result.decision.correlationId}`);
+          console.log();
+          console.log(`📝 Result`);
+          console.log(`─────────`);
+          console.log(result.content);
+          console.log(`─────────`);
+          console.log(`  Duration: ${result.durationMs}ms | Tokens: in:${result.providerResult.usage.inputTokens} out:${result.providerResult.usage.outputTokens}`);
+          console.log(`  Stored in Counsel Layer ✓\n`);
+        } catch (err) {
+          console.error(`Dispatch failed: ${(err as Error).message}`);
+          process.exit(1);
+        }
+      } else {
+        // Dry run: analyze and show routing only
+        const decision = palace.vizier.analyzeTask({
+          description,
+          project: "default",
+        });
+
+        const courtier = palace.vizier.matchCourtier(description);
+
+        console.log(`\n📋 Task Analysis (dry run — add --execute to run)`);
+        console.log(`  Description: ${description}`);
+        console.log(`  Account:     ${decision.account}`);
+        console.log(`  Provider:    ${decision.providerId}`);
+        console.log(`  Model:       ${decision.model}`);
+        console.log(`  Courtier:    ${courtier?.displayName ?? "(no match — Vizier handles directly)"}`);
+        console.log(`  Correlation: ${decision.correlationId}`);
+        console.log(`  Reasoning:   ${decision.reasoning}\n`);
+      }
       break;
     }
 

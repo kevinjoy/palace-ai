@@ -136,7 +136,7 @@ export async function boot(configPath?: string): Promise<PalaceInstance> {
     logger.warn("Could not load courtiers", { error: (err as Error).message });
   }
 
-  // 7. Create Vizier
+  // 7. Create Vizier (with provider registry for dispatch)
   const vizier = new Vizier({
     registry,
     memory,
@@ -144,6 +144,7 @@ export async function boot(configPath?: string): Promise<PalaceInstance> {
     router,
     analyzer: new TaskAnalyzer(),
     eventBus,
+    providers: providerRegistry,
   });
 
   logger.info("Palace AI ready", {
